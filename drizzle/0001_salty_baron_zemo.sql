@@ -1,0 +1,1 @@
+CREATE INDEX `matches_created_at_id_idx` ON `matches` (`created_at`,`id`);

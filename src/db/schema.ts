@@ -36,6 +36,9 @@ export const matches = sqliteTable(
   },
   (table) => [
     index("matches_status_start_time_idx").on(table.status, table.startTime),
+    // Backs the keyset pagination sort key in routes/matches/list.ts.
+    // Declared ascending; SQLite scans it in reverse for the DESC ordering.
+    index("matches_created_at_id_idx").on(table.createdAt, table.id),
     check(
       "matches_status_check",
       sql`${table.status} in ('scheduled', 'live', 'finished')`,

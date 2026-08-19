@@ -1,0 +1,686 @@
+{
+  "info": {
+    "name": "Sportz API",
+    "description": "Real-time sports API.\n\nSet the `baseUrl` collection variable (defaults to http://localhost:8000).\nStart the server with `npm run dev` before running this collection.\n\n## WebSocket\n\nThe server also exposes a WebSocket feed at `{{wsUrl}}` (ws://localhost:8000/ws).\nIt cannot be included as a request in this file: the Postman v2.1.0 collection\nschema has no WebSocket request type, a collection containing WebSocket requests\ncannot also contain HTTP requests, and Newman cannot execute WebSocket requests.\n\nSee the **Realtime (WebSocket)** folder for how to exercise it by hand.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "matchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextCursor",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "page1Ids",
+      "value": "[]",
+      "type": "string"
+    },
+    {
+      "key": "wsUrl",
+      "value": "ws://localhost:8000/ws",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Timestamps are relative to now, so the 'live' and 'finished' cases",
+          "// stay in the right window no matter when the collection is run.",
+          "const now = Date.now();",
+          "const iso = (ms) => new Date(ms).toISOString();",
+          "pm.collectionVariables.set('liveStart', iso(now - 3600000));",
+          "pm.collectionVariables.set('liveEnd', iso(now + 3600000));",
+          "pm.collectionVariables.set('pastStart', iso(now - 14400000));",
+          "pm.collectionVariables.set('pastEnd', iso(now - 7200000));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET / - health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns a message', () => pm.expect(pm.response.json()).to.have.property('message'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        {
+          "name": "POST /matches - live match (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"football\",\n  \"homeTeam\": \"Riffa\",\n  \"awayTeam\": \"Muharraq\",\n  \"startTime\": \"{{liveStart}}\",\n  \"endTime\": \"{{liveEnd}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('derives status = live', () => pm.expect(pm.response.json().data.status).to.eql('live'));",
+                  "pm.test('scores default to 0', () => {",
+                  "    const match = pm.response.json().data;",
+                  "    pm.expect(match.homeScore).to.eql(0);",
+                  "    pm.expect(match.awayScore).to.eql(0);",
+                  "});",
+                  "pm.collectionVariables.set('matchId', pm.response.json().data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches - scheduled match, coerced scores (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"basketball\",\n  \"homeTeam\": \"Manama\",\n  \"awayTeam\": \"Sitra\",\n  \"startTime\": \"2030-01-01T18:00:00Z\",\n  \"endTime\": \"2030-01-01T20:00:00Z\",\n  \"homeScore\": \"2\",\n  \"awayScore\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('derives status = scheduled', () => pm.expect(pm.response.json().data.status).to.eql('scheduled'));",
+                  "pm.test('coerces string score to number', () => pm.expect(pm.response.json().data.homeScore).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches - finished match (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"football\",\n  \"homeTeam\": \"Hidd\",\n  \"awayTeam\": \"Busaiteen\",\n  \"startTime\": \"{{pastStart}}\",\n  \"endTime\": \"{{pastEnd}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('derives status = finished', () => pm.expect(pm.response.json().data.status).to.eql('finished'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches - list (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns a data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                  "pm.test('newest first', () => {",
+                  "    const ids = pm.response.json().data.map((m) => m.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => b - a));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?limit=2 - page 1 (saves cursor)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?limit=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('at most 2 rows', () => pm.expect(pm.response.json().data.length).to.be.at.most(2));",
+                  "pm.test('returns a pagination block', () => {",
+                  "    const page = pm.response.json().pagination;",
+                  "    pm.expect(page).to.have.property('limit', 2);",
+                  "    pm.expect(page).to.have.property('hasMore');",
+                  "    pm.expect(page).to.have.property('nextCursor');",
+                  "});",
+                  "pm.test('newest first', () => {",
+                  "    const ids = pm.response.json().data.map((m) => m.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => b - a));",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('nextCursor', body.pagination.nextCursor || '');",
+                  "pm.collectionVariables.set('page1Ids', JSON.stringify(body.data.map((m) => m.id)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?cursor - page 2 (no overlap)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?limit=2&cursor={{nextCursor}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{nextCursor}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Only meaningful when page 1 reported a further page.",
+                  "if (!pm.collectionVariables.get('nextCursor')) {",
+                  "    pm.test.skip('page 2 - no further page to fetch', () => {});",
+                  "} else {",
+                  "    pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "    pm.test('no overlap with page 1', () => {",
+                  "        const page1 = JSON.parse(pm.collectionVariables.get('page1Ids'));",
+                  "        const page2 = pm.response.json().data.map((m) => m.id);",
+                  "        const overlap = page2.filter((id) => page1.includes(id));",
+                  "        pm.expect(overlap).to.eql([]);",
+                  "    });",
+                  "    pm.test('continues below page 1', () => {",
+                  "        const page1 = JSON.parse(pm.collectionVariables.get('page1Ids'));",
+                  "        const page2 = pm.response.json().data.map((m) => m.id);",
+                  "        if (page2.length) pm.expect(Math.max(...page2)).to.be.below(Math.min(...page1));",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Matches - validation errors",
+      "item": [
+        {
+          "name": "POST /matches - empty body (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('lists the missing fields', () => {",
+                  "    const paths = pm.response.json().details.map((d) => d.path[0]);",
+                  "    pm.expect(paths).to.include.members(['sport', 'homeTeam', 'awayTeam']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches - blank sport + non-ISO date (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"\",\n  \"homeTeam\": \"A\",\n  \"awayTeam\": \"B\",\n  \"startTime\": \"March 5 2020\",\n  \"endTime\": \"2030-01-01T20:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('flags both sport and startTime', () => {",
+                  "    const paths = pm.response.json().details.map((d) => d.path[0]);",
+                  "    pm.expect(paths).to.include('sport');",
+                  "    pm.expect(paths).to.include('startTime');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches - endTime before startTime (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"football\",\n  \"homeTeam\": \"A\",\n  \"awayTeam\": \"B\",\n  \"startTime\": \"2030-01-01T20:00:00Z\",\n  \"endTime\": \"2030-01-01T18:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on the endTime path', () => {",
+                  "    const issue = pm.response.json().details[0];",
+                  "    pm.expect(issue.path[0]).to.eql('endTime');",
+                  "    pm.expect(issue.message).to.contain('after startTime');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches - negative score (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sport\": \"football\",\n  \"homeTeam\": \"A\",\n  \"awayTeam\": \"B\",\n  \"startTime\": \"2030-01-01T18:00:00Z\",\n  \"endTime\": \"2030-01-01T20:00:00Z\",\n  \"homeScore\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on homeScore', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('homeScore'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?limit=101 - above max (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?limit=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?limit=abc - not a number (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?limit=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?limit=0 - not positive (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?limit=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches?cursor=garbage - malformed cursor (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches?cursor=not-a-cursor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "not-a-cursor"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on cursor', () => {",
+                  "    const issue = pm.response.json().details[0];",
+                  "    pm.expect(issue.path[0]).to.eql('cursor');",
+                  "    pm.expect(issue.message).to.contain('cursor');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Realtime (WebSocket)",
+      "description": "The WebSocket feed at `{{wsUrl}}` cannot be run from this collection\n(see the collection description for why). Exercise it manually:\n\n### Connect\n\n1. **New → WebSocket Request** (not a request inside this collection).\n2. Enter `ws://localhost:8000/ws` and press **Connect**.\n3. On connect the server immediately pushes:\n\n```json\n{ \"type\": \"welcome\" }\n```\n\n### Observe a broadcast\n\n4. Keep the socket open.\n5. In this collection, run **Matches → POST /matches - live match (201)**.\n6. The WebSocket tab receives the created match:\n\n```json\n{\n  \"type\": \"match_created\",\n  \"data\": {\n    \"id\": 1,\n    \"sport\": \"football\",\n    \"homeTeam\": \"Riffa\",\n    \"awayTeam\": \"Muharraq\",\n    \"status\": \"live\",\n    \"startTime\": \"2026-08-19T10:00:00.000Z\",\n    \"endTime\": \"2026-08-19T12:00:00.000Z\",\n    \"homeScore\": 0,\n    \"awayScore\": 0,\n    \"createdAt\": \"2026-08-19T11:00:00.000Z\"\n  }\n}\n```\n\nEvery connected client receives this — open two WebSocket tabs to see the fan-out.\n\n### Messages\n\n| type | when | payload |\n| --- | --- | --- |\n| `welcome` | immediately on connect | none |\n| `match_created` | after a successful `POST /matches` | the full match row |\n\nThe server does not currently handle inbound client messages.\nMax payload is 1 MB; connections to any path other than `/ws` are rejected with 404.",
+      "item": []
+    }
+  ]
+}
