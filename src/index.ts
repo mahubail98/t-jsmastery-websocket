@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import { matchesRouter } from "./routes/matches/index.js";
+import { commentaryRouter } from "./routes/commentary/index.js";
 import http from "node:http";
 import { attachWebSocketServer } from "./utils/ws.js";
 
@@ -17,9 +18,11 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 app.use("/matches", matchesRouter);
+app.use('/matches/:id/commentary', commentaryRouter);
 
-const { broadcastMatchCreated } = attachWebSocketServer(server);
+const { broadcastMatchCreated, broadcastCommentary } = attachWebSocketServer(server);
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
+app.locals.broadcastCommentary = broadcastCommentary;
 
 server.listen(PORT, HOST, () => {
   const baseUrl =

@@ -29,6 +29,11 @@
       "key": "wsUrl",
       "value": "ws://localhost:8000/ws",
       "type": "string"
+    },
+    {
+      "key": "commentaryId",
+      "value": "",
+      "type": "string"
     }
   ],
   "event": [
@@ -346,6 +351,241 @@
                   "        if (page2.length) pm.expect(Math.max(...page2)).to.be.below(Math.min(...page1));",
                   "    });",
                   "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Commentary",
+      "description": "Runs after **Matches**, which stores the created match id in `{{matchId}}`.\n\nSequence numbers are unique per match, so these requests assume a fresh match each run.",
+      "item": [
+        {
+          "name": "POST /matches/:id/commentary - full event (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const event = pm.response.json().data;",
+                  "pm.test('matchId comes from the URL', () => pm.expect(String(event.matchId)).to.eql(String(pm.collectionVariables.get('matchId'))));",
+                  "pm.test('metadata round-trips as an object', () => pm.expect(event.metadata.xg).to.eql(0.42));",
+                  "pm.test('tags round-trip as an array', () => pm.expect(event.tags).to.eql(['goal', 'highlight']));",
+                  "pm.test('minute preserved', () => pm.expect(event.minute).to.eql(23));",
+                  "pm.collectionVariables.set('commentaryId', event.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - minimal event (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 2,\n  \"eventType\": \"kickoff\",\n  \"message\": \"We are underway.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const event = pm.response.json().data;",
+                  "pm.test('tags default to []', () => pm.expect(event.tags).to.eql([]));",
+                  "pm.test('omitted optional fields are null', () => {",
+                  "    pm.expect(event.minute).to.eql(null);",
+                  "    pm.expect(event.metadata).to.eql(null);",
+                  "    pm.expect(event.actor).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - duplicate sequence (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Re-publishing sequence 1 must conflict, not duplicate the event.",
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('not a 500', () => pm.expect(pm.response.code).to.not.eql(500));",
+                  "pm.test('explains the conflict', () => pm.expect(pm.response.json().error).to.contain('sequence'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/:id/commentary - list (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns a data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                  "pm.test('every event belongs to this match', () => {",
+                  "    const id = String(pm.collectionVariables.get('matchId'));",
+                  "    pm.response.json().data.forEach((e) => pm.expect(String(e.matchId)).to.eql(id));",
+                  "});",
+                  "pm.test('newest first', () => {",
+                  "    const seqs = pm.response.json().data.map((e) => e.sequence);",
+                  "    pm.expect(seqs).to.eql([...seqs].sort((a, b) => b - a));",
+                  "});",
+                  "pm.test('includes both created events', () => {",
+                  "    const seqs = pm.response.json().data.map((e) => e.sequence);",
+                  "    pm.expect(seqs).to.include.members([1, 2]);",
+                  "});",
+                  "pm.test('metadata and tags deserialised', () => {",
+                  "    const withMeta = pm.response.json().data.find((e) => e.sequence === 1);",
+                  "    pm.expect(withMeta.metadata).to.be.an('object');",
+                  "    pm.expect(withMeta.tags).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/:id/commentary?limit=1 - respects limit (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('exactly 1 row', () => pm.expect(pm.response.json().data.length).to.eql(1));",
+                  "pm.test('returns the newest event', () => pm.expect(pm.response.json().data[0].sequence).to.eql(2));"
                 ]
               }
             }
@@ -678,8 +918,458 @@
       ]
     },
     {
+      "name": "Commentary - error cases",
+      "item": [
+        {
+          "name": "POST /matches/999999/commentary - unknown match (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/999999/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "999999",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('not an opaque 500', () => pm.expect(pm.response.code).to.not.eql(500));",
+                  "pm.test('says the match is missing', () => pm.expect(pm.response.json().error).to.contain('not found'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/abc/commentary - non-numeric id (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/abc/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "abc",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on the id param', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - empty body (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('lists the required fields', () => {",
+                  "    const paths = pm.response.json().details.map((d) => d.path[0]);",
+                  "    pm.expect(paths).to.include.members(['sequence', 'eventType', 'message']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - blank message (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 50,\n  \"eventType\": \"goal\",\n  \"message\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on message', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('message'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - negative minute (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 51,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"minute\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on minute', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('minute'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - tags not an array (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 52,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"tags\": \"goal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on tags', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('tags'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /matches/:id/commentary - metadata not an object (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 53,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"metadata\": [\n    1,\n    2\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on metadata', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('metadata'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/999999/commentary - unknown match (200, empty)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/999999/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "999999",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Documents current behaviour: an unknown match is an empty feed, not a 404.",
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('empty data array', () => pm.expect(pm.response.json().data).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/abc/commentary - non-numeric id (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/abc/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "abc",
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on the id param', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/:id/commentary?limit=101 - above max (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary?limit=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /matches/:id/commentary?limit=abc - not a number (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary?limit=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "matches",
+                "{{matchId}}",
+                "commentary"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Realtime (WebSocket)",
-      "description": "The WebSocket feed at `{{wsUrl}}` cannot be run from this collection\n(see the collection description for why). Exercise it manually:\n\n### Connect\n\n1. **New → WebSocket Request** (not a request inside this collection).\n2. Enter `ws://localhost:8000/ws` and press **Connect**.\n3. On connect the server immediately pushes:\n\n```json\n{ \"type\": \"welcome\" }\n```\n\n### Observe a broadcast\n\n4. Keep the socket open.\n5. In this collection, run **Matches → POST /matches - live match (201)**.\n6. The WebSocket tab receives the created match:\n\n```json\n{\n  \"type\": \"match_created\",\n  \"data\": {\n    \"id\": 1,\n    \"sport\": \"football\",\n    \"homeTeam\": \"Riffa\",\n    \"awayTeam\": \"Muharraq\",\n    \"status\": \"live\",\n    \"startTime\": \"2026-08-19T10:00:00.000Z\",\n    \"endTime\": \"2026-08-19T12:00:00.000Z\",\n    \"homeScore\": 0,\n    \"awayScore\": 0,\n    \"createdAt\": \"2026-08-19T11:00:00.000Z\"\n  }\n}\n```\n\nEvery connected client receives this — open two WebSocket tabs to see the fan-out.\n\n### Messages\n\n| type | when | payload |\n| --- | --- | --- |\n| `welcome` | immediately on connect | none |\n| `match_created` | after a successful `POST /matches` | the full match row |\n\nThe server does not currently handle inbound client messages.\nMax payload is 1 MB; connections to any path other than `/ws` are rejected with 404.",
+      "description": "The WebSocket feed at `{{wsUrl}}` cannot be run from this collection:\nthe Postman v2.1.0 schema has no WebSocket request type, a collection holding\nWebSocket requests cannot also hold HTTP requests, and Newman cannot execute them.\nExercise it manually:\n\n### Connect\n\n1. **New → WebSocket Request**, enter `ws://localhost:8000/ws`, press **Connect**.\n2. The server immediately pushes `{ \"type\": \"welcome\" }`.\n\n### Subscribe to a match\n\nCommentary is delivered **only to subscribers of that match**. Send:\n\n```json\n{ \"type\": \"subscribe\", \"matchId\": 1 }\n```\n\nThe server replies `{ \"type\": \"subscribed\", \"matchId\": 1 }`.\n\nThen run **Commentary → POST /matches/:id/commentary** for that same match id.\nThe socket receives:\n\n```json\n{\n  \"type\": \"commentary\",\n  \"data\": { \"id\": 1, \"matchId\": 1, \"sequence\": 1, \"eventType\": \"goal\", \"message\": \"Goal for Riffa!\", \"tags\": [\"goal\"] }\n}\n```\n\nSend `{ \"type\": \"unsubscribe\", \"matchId\": 1 }` to stop receiving them.\nClosing the socket unsubscribes from everything automatically.\n\n### Message reference\n\n**Client → server**\n\n| type | fields | notes |\n| --- | --- | --- |\n| `subscribe` | `matchId` | must be a positive integer |\n| `unsubscribe` | `matchId` | must be a positive integer |\n\n**Server → client**\n\n| type | when | payload |\n| --- | --- | --- |\n| `welcome` | on connect | none |\n| `subscribed` / `unsubscribed` | ack | `matchId` |\n| `error` | bad JSON or unsupported message | `message` |\n| `match_created` | after `POST /matches` | full match row (**all clients**) |\n| `commentary` | after `POST /matches/:id/commentary` | full commentary row (**subscribers only**) |\n\nMalformed input is answered with an `error` message and does not drop the connection.\nThe server pings every 30s and terminates sockets that stop responding.\nMax payload 1 MB; any path other than `/ws` is rejected with 404.",
       "item": []
     }
   ]
