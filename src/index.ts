@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from "express";
+import cors from "cors";
 import { matchesRouter } from "./routes/matches/index.js";
 import { commentaryCreateRouter } from "./routes/commentary/index.js";
 import http from "node:http";
@@ -11,6 +12,7 @@ const app = express();
 
 const server = http.createServer(app);
 
+app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
 app.get("/", (_req: Request, res: Response) => {
