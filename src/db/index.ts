@@ -2,8 +2,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema.js";
 
-// Local SQLite file inside the project; override with DATABASE_URL for Turso etc.
-const url = process.env.DATABASE_URL ?? "file:sportz.db";
+const url = "file:sportz.db";
 
 export const client = createClient({ url });
 

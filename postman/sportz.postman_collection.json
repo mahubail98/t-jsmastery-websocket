@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Sportz API",
-    "description": "Real-time sports API.\n\nSet the `baseUrl` collection variable (defaults to http://localhost:8000).\nStart the server with `npm run dev` before running this collection.\n\n## WebSocket\n\nThe server also exposes a WebSocket feed at `{{wsUrl}}` (ws://localhost:8000/ws).\nIt cannot be included as a request in this file: the Postman v2.1.0 collection\nschema has no WebSocket request type, a collection containing WebSocket requests\ncannot also contain HTTP requests, and Newman cannot execute WebSocket requests.\n\nSee the **Realtime (WebSocket)** folder for how to exercise it by hand.",
+    "description": "Real-time sports API.\n\nSet the `baseUrl` collection variable (defaults to http://localhost:8000).\nStart the server with `npm run dev` before running this collection.\n\n## Commentary endpoints\n\n- `POST /commentary` — create; the match is named by `matchId` **in the body**.\n- `GET /matches/:id/commentary` — read; the match is named in the **URL**.\n\n## WebSocket\n\nThe server also exposes a WebSocket feed at `{{wsUrl}}` (ws://localhost:8000/ws).\nIt cannot be included as a request in this file: the Postman v2.1.0 collection\nschema has no WebSocket request type, a collection containing WebSocket requests\ncannot also contain HTTP requests, and Newman cannot execute WebSocket requests.\n\nSee the **Realtime (WebSocket)** folder for how to exercise it by hand.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -363,7 +363,7 @@
       "description": "Runs after **Matches**, which stores the created match id in `{{matchId}}`.\n\nSequence numbers are unique per match, so these requests assume a fresh match each run.",
       "item": [
         {
-          "name": "POST /matches/:id/commentary - full event (201)",
+          "name": "POST /commentary - full event (201)",
           "request": {
             "method": "POST",
             "header": [
@@ -374,7 +374,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -382,13 +382,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -412,7 +410,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - minimal event (201)",
+          "name": "POST /commentary - minimal event (201)",
           "request": {
             "method": "POST",
             "header": [
@@ -423,7 +421,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 2,\n  \"eventType\": \"kickoff\",\n  \"message\": \"We are underway.\"\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 2,\n  \"eventType\": \"kickoff\",\n  \"message\": \"We are underway.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -431,13 +429,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -462,7 +458,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - duplicate sequence (409)",
+          "name": "POST /commentary - duplicate sequence (409)",
           "request": {
             "method": "POST",
             "header": [
@@ -473,7 +469,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 1,\n  \"minute\": 23,\n  \"period\": \"1H\",\n  \"eventType\": \"goal\",\n  \"actor\": \"A. Hassan\",\n  \"team\": \"Riffa\",\n  \"message\": \"Goal for Riffa!\",\n  \"metadata\": {\n    \"xg\": 0.42,\n    \"assist\": \"M. Ali\"\n  },\n  \"tags\": [\n    \"goal\",\n    \"highlight\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -481,13 +477,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -921,7 +915,7 @@
       "name": "Commentary - error cases",
       "item": [
         {
-          "name": "POST /matches/999999/commentary - unknown match (404)",
+          "name": "POST /commentary - unknown matchId (404)",
           "request": {
             "method": "POST",
             "header": [
@@ -932,7 +926,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
+              "raw": "{\n  \"matchId\": \"999999\",\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -940,13 +934,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/999999/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "999999",
                 "commentary"
               ]
             }
@@ -966,7 +958,7 @@
           ]
         },
         {
-          "name": "POST /matches/abc/commentary - non-numeric id (400)",
+          "name": "POST /commentary - non-numeric matchId (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -977,7 +969,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
+              "raw": "{\n  \"matchId\": \"abc\",\n  \"sequence\": 1,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -985,13 +977,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/abc/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "abc",
                 "commentary"
               ]
             }
@@ -1003,14 +993,14 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-                  "pm.test('error is on the id param', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('id'));"
+                  "pm.test('error is on matchId', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('matchId'));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - empty body (400)",
+          "name": "POST /commentary - empty body (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -1029,13 +1019,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -1049,7 +1037,7 @@
                   "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
                   "pm.test('lists the required fields', () => {",
                   "    const paths = pm.response.json().details.map((d) => d.path[0]);",
-                  "    pm.expect(paths).to.include.members(['sequence', 'eventType', 'message']);",
+                  "    pm.expect(paths).to.include.members(['matchId', 'sequence', 'eventType', 'message']);",
                   "});"
                 ]
               }
@@ -1057,7 +1045,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - blank message (400)",
+          "name": "POST /commentary - blank message (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -1068,7 +1056,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 50,\n  \"eventType\": \"goal\",\n  \"message\": \"   \"\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 50,\n  \"eventType\": \"goal\",\n  \"message\": \"   \"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1076,13 +1064,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -1101,7 +1087,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - negative minute (400)",
+          "name": "POST /commentary - negative minute (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -1112,7 +1098,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 51,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"minute\": -1\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 51,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"minute\": -1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1120,13 +1106,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -1145,7 +1129,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - tags not an array (400)",
+          "name": "POST /commentary - tags not an array (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -1156,7 +1140,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 52,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"tags\": \"goal\"\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 52,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"tags\": \"goal\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1164,13 +1148,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -1189,7 +1171,7 @@
           ]
         },
         {
-          "name": "POST /matches/:id/commentary - metadata not an object (400)",
+          "name": "POST /commentary - metadata not an object (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -1200,7 +1182,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sequence\": 53,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"metadata\": [\n    1,\n    2\n  ]\n}",
+              "raw": "{\n  \"matchId\": \"{{matchId}}\",\n  \"sequence\": 53,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\",\n  \"metadata\": [\n    1,\n    2\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1208,13 +1190,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/matches/{{matchId}}/commentary",
+              "raw": "{{baseUrl}}/commentary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "matches",
-                "{{matchId}}",
                 "commentary"
               ]
             }
@@ -1360,6 +1340,51 @@
                 "exec": [
                   "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
                   "pm.test('error is on limit', () => pm.expect(pm.response.json().details[0].path[0]).to.eql('limit'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /commentary - missing matchId (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sequence\": 90,\n  \"eventType\": \"goal\",\n  \"message\": \"Goal!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/commentary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "commentary"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('error is on matchId', () => {",
+                  "    const paths = pm.response.json().details.map((d) => d.path[0]);",
+                  "    pm.expect(paths).to.include('matchId');",
+                  "});"
                 ]
               }
             }

@@ -5,5 +5,5 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   casing: "snake_case",
-  dbCredentials: { url: process.env.DATABASE_URL ?? "file:sportz.db" },
+  dbCredentials: { url: "file:sportz.db" },
 });

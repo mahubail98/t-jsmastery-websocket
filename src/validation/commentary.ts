@@ -19,6 +19,7 @@ export const listCommentaryQuerySchema = z.object({
 });
 
 export const createCommentarySchema = z.object({
+  matchId: positiveInt,
   // Pre-match and half-time events have no minute.
   minute: nonNegativeInt.optional(),
   // Ordering key for the live feed; unique per match at the DB level.
