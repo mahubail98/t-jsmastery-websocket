@@ -61,7 +61,10 @@ export function attachWebSocketServer(
     }
   }, heartbeatIntervalMs);
 
-  wss.on("close", () => clearInterval(interval));
+  const stopHeartbeat = () => clearInterval(interval);
+  wss.on("close", stopHeartbeat);
+  server.on("close", stopHeartbeat);
+  interval.unref();
 
   function broadcastMatchCreated(match: Match): void {
     broadcastToAll(wss, { type: "match_created", data: match });
